@@ -1,7 +1,7 @@
-add_library(network window_network.cpp)
+add_library(network web_network.js)
 
 target_include_directories(network 
     PUBLIC ${PROJECT_SOURCE_DIR}/api
     PUBLIC ${PROJECT_SOURCE_DIR}/core/include
-    PUBLIC ${PROJECT_SOURCE_DIR}/platform/window/include
+    PUBLIC ${PROJECT_SOURCE_DIR}/platform/web/include
 )
