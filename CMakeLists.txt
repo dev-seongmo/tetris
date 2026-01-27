@@ -35,8 +35,21 @@ add_subdirectory(core/source/tetromino)
 add_subdirectory(core/source/util)
 add_subdirectory(core/source/engine)
 
+# 웹 빌드
+if (EMSCRIPTEN)
+    # 실행 파일 확장자를 .html로 설정
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    
+    # 웹 전용 소스 추가 (WIN32 밑에 있던걸 여기로 이동)
+    add_subdirectory(platform/web/source/input)
+    add_subdirectory(platform/web/source/render)
+    add_subdirectory(platform/web/source/network)
+    # main도 필요하다면 여기에 추가 (예: add_subdirectory(platform/web/source/main))
+
+    # 링커 옵션 (SDL2 사용 시 필수)
+    add_link_options("-sUSE_SDL=2")
 # 리눅스 터미널 UI 빌드
-if (UNIX)
+elseif (UNIX)
     add_subdirectory(platform/linux/source/input)
     add_subdirectory(platform/linux/source/render)
     add_subdirectory(platform/linux/source/network)
