@@ -1,4 +1,4 @@
-#include "lobby_input_handler/window_lobby_input_handler.hpp"
+#include "input/window_lobby_input_handler.hpp"
 
 #include <string>
 #include <stdio.h>
