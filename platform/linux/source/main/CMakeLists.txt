@@ -28,5 +28,4 @@ target_link_libraries(tetris
         lobby
         linux_lobby_network
         linux_lobby_renderer
-        linux_lobby_input_handler
 )

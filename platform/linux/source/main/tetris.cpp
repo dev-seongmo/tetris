@@ -2,10 +2,10 @@
 #include "engine/engine.hpp"
 #include "engine/multi_engine.hpp"
 #include "engine/solo_engine.hpp"
-#include "input/linux_input.hpp"
+#include "i_input_factory.hpp"
+#include "input/linux_input_factory.hpp"
 #include "menu.hpp"
 #include "lobby.hpp"
-#include "lobby_input_handler/linux_lobby_input_handler.hpp"
 #include "lobby_network/linux_lobby_network.hpp"
 #include "lobby_renderer/linux_lobby_renderer.hpp"
 #include "network/linux_network.hpp"
@@ -21,12 +21,12 @@
 #include <chrono>
 #include <thread>
 
-static IInputHandler* input;
 static IRenderer* renderer;
 static INetwork* network;
 static Engine* engine;
 static Setting* setting;
 static Lobby* lobby;
+static IInputFactory* input_factory;
 static bool finished = false;
 
 using namespace std;
@@ -52,6 +52,8 @@ int main()
     render_factory.initialize(setting);
 
     AppState state = AppState::MENU;
+
+    input_factory = new LinuxInputFactory();
 
     char in = 0;
 
@@ -98,14 +100,17 @@ AppState run_menu()
 {
     RenderFactory& render_factory = RenderFactory::getInstance();
     MenuRenderer menu_renderer = render_factory.create_menu_renderer();
+    IMenuInputHandler* input_handler = input_factory->create_menu_input_handler();   
 
-    Menu menu(&menu_renderer, new LinuxInput());
+    Menu menu(&menu_renderer, input_handler);
     menu.reload();
 
     AppState app_state = AppState::MENU;
     while (app_state == AppState::MENU) {
         app_state = menu.update();
     }
+
+    delete input_handler;
 
     return app_state;
 }
@@ -116,14 +121,17 @@ AppState run_settings()
     RenderFactory render_factory = RenderFactory::getInstance();
     SettingStorage& setting_storage = SettingStorage::getInstance();
     SettingRenderer setting_renderer = render_factory.create_setting_renderer();
+    ISettingInputHandler* input_handler = input_factory->create_setting_input_handler();   
 
-    SettingManager setting_manager(setting, &setting_renderer, new LinuxInput(), &setting_storage);
+    SettingManager setting_manager(setting, &setting_renderer, input_handler, &setting_storage);
     setting_manager.reload();
 
     AppState app_state = AppState::SETTINGS;
     while (app_state == AppState::SETTINGS) {
         app_state = setting_manager.update();
     }
+
+    delete input_handler;
 
     return app_state;
 }
@@ -140,8 +148,8 @@ AppState run_single_game()
     BoxRenderer box_renderer = render_factory.create_box_renderer();
 
     renderer = &linux_renderer;
-    input = new LinuxInput();
-    engine = new SoloEngine(setting, input, renderer);
+    IInputHandler* input_handler = input_factory->create_input_handler();   
+    engine = new SoloEngine(setting, input_handler, renderer);
 
     renderer->render_clear();
     renderer->render_background();
@@ -162,10 +170,10 @@ AppState run_single_game()
 
     wait_key();
 
-    delete input;
+    delete input_handler;
     delete engine;
 
-    input = nullptr;
+    input_handler = nullptr;
     renderer = nullptr;
     engine = nullptr;
 
@@ -176,7 +184,7 @@ AppState run_multi_game()
 {
     bool is_run_continue = true;
     bool is_stop_continue = true;
-    ILobbyInputHandler* linux_lobby_input_handler = new LinuxLobbyInputHandler();
+    ILobbyInputHandler* linux_lobby_input_handler = input_factory->create_lobby_input_handler();   
     ILobbyNetwork* linux_lobby_network = new LinuxLobbyNetwork();
     ILobbyRenderer* linux_lobby_renderer = new LinuxLobbyRenderer();
     lobby = new Lobby(linux_lobby_network, linux_lobby_renderer, linux_lobby_input_handler);
@@ -186,9 +194,9 @@ AppState run_multi_game()
 
     LinuxMultiRenderer linux_renderer = render_factory.create_linux_multi_renderer();
     renderer = &linux_renderer;
-    input = new LinuxInput();
+    IInputHandler* input_handler = input_factory->create_input_handler();   
     network = new LinuxNetwork();
-    engine = new MultiEngine(setting, input, renderer, network, lobby);
+    engine = new MultiEngine(setting, input_handler, renderer, network, lobby);
 
     renderer->render_clear();
     renderer->render_background();
@@ -202,13 +210,13 @@ AppState run_multi_game()
 
     delete engine;
     delete network;
-    delete input;
+    delete input_handler;
     delete lobby;
     delete linux_lobby_network;
     delete linux_lobby_renderer;
     delete linux_lobby_input_handler;
 
-    input = nullptr;
+    input_handler = nullptr;
     renderer = nullptr;
     network = nullptr;
     engine = nullptr;
