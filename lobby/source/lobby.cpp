@@ -159,8 +159,8 @@ bool Lobby::enter_room()
             snprintf(selected_server_ip_address, sizeof(selected_server_ip_address), "%s", room_ip);
             client_ip_address.clear();
             for (int i = 0; i < received_data.id_len; ++i)
-                client_ip_address[std::string(received_data.room_master_id)] =
-                    std::string(received_data.id[i]);
+                client_ip_address[std::string(received_data.id[i])] =
+                    std::string(received_data.room_master_id);
             lobby_renderer->render_client_view_room(received_data.room_master_id,
                                                           client_ip_address);
             is_in_room = true;
@@ -175,8 +175,8 @@ bool Lobby::enter_room()
             snprintf(selected_server_ip_address, sizeof(selected_server_ip_address), "%s", room_ip);
             client_ip_address.clear();
             for (int i = 0; i < received_data.id_len; ++i)
-                client_ip_address[std::string(received_data.room_master_id)] =
-                    std::string(received_data.id[i]);
+                client_ip_address[std::string(received_data.id[i])] =
+                    std::string(received_data.room_master_id);
             is_game_start = true;
             break;
         }

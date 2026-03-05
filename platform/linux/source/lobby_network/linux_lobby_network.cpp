@@ -55,16 +55,23 @@ void LinuxLobbyNetwork::find_broadcast_ip(char* broadcast_ip)
 {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     struct ifreq ifr{};
+    const char* adapter_name[] = {"eth0", "ens33"};
     std::array<char, INET_ADDRSTRLEN> buffer{};
+    int index = 0, adapter_name_size = sizeof(adapter_name) / sizeof(adapter_name[0]);
     
     if (sock < 0) {
         perror("socket failed:");
         return;
     }
 
-    std::strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1);
+    for (index = 0; index < adapter_name_size; ++index) {
+        std::strncpy(ifr.ifr_name, adapter_name[index], IFNAMSIZ - 1);
+        if (ioctl(sock, SIOCGIFBRDADDR, &ifr) >= 0) {
+            break;
+        }
+    }
 
-    if (ioctl(sock, SIOCGIFBRDADDR, &ifr) < 0) {
+    if (index == adapter_name_size) {
         perror("ioctl failed:");
         close(sock);
         return;
@@ -186,7 +193,6 @@ bool LinuxLobbyNetwork::recv_udp(user_data& ud, char* ip)
 {
     socklen_t addr_len;
     uint8_t buf[USER_DATA_SIZE];
-    bool data_received = false;
     int recv_result;
     int n = epoll_wait(epfd, events, MAX_EVENTS, 0);
 
@@ -219,11 +225,11 @@ bool LinuxLobbyNetwork::recv_udp(user_data& ud, char* ip)
 
                 inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
                 deserialize(buf, ud);
-		data_received = true;
+                return true;
             }
         }
     }
-    return data_received;
+    return false;
 }
 
 void LinuxLobbyNetwork::send_udp(const char* room_master_id,
@@ -263,7 +269,6 @@ bool LinuxLobbyNetwork::recv_udp(room_data& rd, char* ip)
 {
     socklen_t addr_len;
     uint8_t buf[ROOM_DATA_SIZE];
-    bool data_received = false;
     int recv_result;
     int n = epoll_wait(epfd, events, MAX_EVENTS, 0);
 
@@ -295,11 +300,11 @@ bool LinuxLobbyNetwork::recv_udp(room_data& rd, char* ip)
 
                 inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
                 deserialize(buf, rd);
-		data_received = true;
+                return true;
             }
         }
     }
-    return true;
+    return false;
 }
 
 void LinuxLobbyNetwork::send_multi_udp(
