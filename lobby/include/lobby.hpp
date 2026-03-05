@@ -14,7 +14,7 @@ class Lobby
 {
   private:
     std::unordered_map<std::string, std::string> server_ip_address; // key=>ip, value=>id
-    std::unordered_map<std::string, std::string> client_ip_address; // server: key=>id, value=>ip / client: key=>room_host_id, value=>room_user_id
+    std::unordered_map<std::string, std::string> client_ip_address; // server: key=>id, value=>ip / client: key=>room_user_id, value=>room_host_id
     char selected_server_ip_address[16];
     char my_id[9];
     ILobbyNetwork* lobby_network;
