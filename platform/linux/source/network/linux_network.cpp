@@ -231,6 +231,7 @@ bool LinuxNetwork::recv_udp(Packet& recv_pkt)
 
                 deserialize(buf, recv_pkt);
                 data_received = true;
+                break;
             }
         }
     }

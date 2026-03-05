@@ -226,7 +226,8 @@ bool LinuxLobbyNetwork::recv_udp(user_data& ud, char* ip)
 
                 inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
                 deserialize(buf, ud);
-		data_received = true;
+                data_received = true;
+                break;
             }
         }
     }
@@ -302,7 +303,8 @@ bool LinuxLobbyNetwork::recv_udp(room_data& rd, char* ip)
 
                 inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
                 deserialize(buf, rd);
-		data_received = true;
+                data_received = true;
+                break;
             }
         }
     }
