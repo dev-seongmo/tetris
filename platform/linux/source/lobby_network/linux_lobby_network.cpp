@@ -55,16 +55,23 @@ void LinuxLobbyNetwork::find_broadcast_ip(char* broadcast_ip)
 {
     int sock = socket(AF_INET, SOCK_DGRAM, 0);
     struct ifreq ifr{};
+    const char* adapter_name[] = {"eth0", "ens33"};
     std::array<char, INET_ADDRSTRLEN> buffer{};
+    int index = 0, adapter_name_size = sizeof(adapter_name) / sizeof(adapter_name[0]);
     
     if (sock < 0) {
         perror("socket failed:");
         return;
     }
 
-    std::strncpy(ifr.ifr_name, "eth0", IFNAMSIZ - 1);
+    for (index = 0; index < adapter_name_size; ++index) {
+        std::strncpy(ifr.ifr_name, adapter_name[index], IFNAMSIZ - 1);
+        if (ioctl(sock, SIOCGIFBRDADDR, &ifr) >= 0) {
+            break;
+        }
+    }
 
-    if (ioctl(sock, SIOCGIFBRDADDR, &ifr) < 0) {
+    if (index == adapter_name_size) {
         perror("ioctl failed:");
         close(sock);
         return;
