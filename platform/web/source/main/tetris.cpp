@@ -5,6 +5,7 @@
 #include "setting_storage.hpp"
 
 #include <emscripten/emscripten.h>
+#include <memory>
 
 EM_JS(void, js_render_background, (), { Module.webRenderer?.render_background(); });
 EM_JS(void, js_render_timer, (int sec), { Module.webRenderer?.render_timer(sec); });
@@ -14,10 +15,28 @@ EM_JS(void, js_render_clear, (), { Module.webRenderer?.render_clear(); });
 EM_JS(void, js_render_game_over, (), { Module.webRenderer?.render_game_over(); });
 EM_JS(void, js_render_board_from_heap, (), { Module.webRenderer?.render_board_from_heap(); });
 
+namespace {
+constexpr bool kIsServer = false;
+constexpr int kMetaSize = 4;
+enum MetaIndex : int
+{
+    META_ROW = 0,
+    META_COL = 1,
+    META_ROT = 2,
+    META_TYPE = 3
+};
+
 static int g_last_key = 0;
 static int g_board_flat[BOARD_ROW * BOARD_COL];
 static int g_active_shape[MINO_SIZE * MINO_SIZE];
-static int g_meta[4]; // [row, col, rot, type]
+static int g_meta[kMetaSize]; // [row, col, rot, type]
+
+static std::unique_ptr<IInputHandler> g_input;
+static std::unique_ptr<IRenderer> g_renderer;
+static std::unique_ptr<SoloEngine> g_engine;
+static std::unique_ptr<Setting> g_setting;
+static bool g_loop_running = false;
+} // namespace
 
 extern "C" EMSCRIPTEN_KEEPALIVE void web_set_key(int key) { g_last_key = key; }
 extern "C" EMSCRIPTEN_KEEPALIVE int* get_board_ptr() { return g_board_flat; }
@@ -36,7 +55,7 @@ class WebInput final : public IInputHandler {
 
 class WebRenderer final : public IRenderer {
   private:
-    void export_render_state(const Board& board)
+    void export_render_state(Board& board)
     {
         const BoardT& bb = board.get_board();
         int k = 0;
@@ -44,16 +63,15 @@ class WebRenderer final : public IRenderer {
             for (int c = 0; c < BOARD_COL; c++)
                 g_board_flat[k++] = bb[r][c];
 
-        Board& mutable_board = const_cast<Board&>(board);
-        auto [ar, ac] = mutable_board.get_active_mino_pos();
-        const int rot = mutable_board.get_active_mino_rotation();
-        const int type = mutable_board.get_active_mino_type();
-        g_meta[0] = ar;
-        g_meta[1] = ac;
-        g_meta[2] = rot;
-        g_meta[3] = type;
+        auto [ar, ac] = board.get_active_mino_pos();
+        const int rot = board.get_active_mino_rotation();
+        const int type = board.get_active_mino_type();
+        g_meta[META_ROW] = ar;
+        g_meta[META_COL] = ac;
+        g_meta[META_ROT] = rot;
+        g_meta[META_TYPE] = type;
 
-        const Mino& m = mutable_board.get_active_mino().get_shape(rot);
+        const Mino& m = board.get_active_mino().get_shape(rot);
         int idx = 0;
         for (int r = 0; r < MINO_SIZE; r++)
             for (int c = 0; c < MINO_SIZE; c++)
@@ -65,7 +83,9 @@ class WebRenderer final : public IRenderer {
 
     void render_board(const Board& board, const Tetromino&) override
     {
-        export_render_state(board);
+        // Board getter API is currently non-const for active mino metadata.
+        Board& mutable_board = const_cast<Board&>(board);
+        export_render_state(mutable_board);
         js_render_board_from_heap();
     }
 
@@ -82,25 +102,23 @@ class WebRenderer final : public IRenderer {
     void render_clear() override { js_render_clear(); }
 };
 
-static IInputHandler* input = nullptr;
-static IRenderer* renderer = nullptr;
-static SoloEngine* engine = nullptr;
-static Setting* setting = nullptr;
-static bool loop_running = false;
+static void stop_loop()
+{
+    if (!g_loop_running) return;
+
+    emscripten_cancel_main_loop();
+    g_loop_running = false;
+}
 
 static void destroy_game()
 {
-    if (engine != nullptr) {
-        engine->finish();
-        delete engine;
-        engine = nullptr;
+    if (g_engine != nullptr) {
+        g_engine->finish();
+        g_engine.reset();
     }
-    delete input;
-    delete renderer;
-    delete setting;
-    input = nullptr;
-    renderer = nullptr;
-    setting = nullptr;
+    g_input.reset();
+    g_renderer.reset();
+    g_setting.reset();
 }
 
 static void init_game()
@@ -109,40 +127,36 @@ static void init_game()
 
     SettingStorage& storage = SettingStorage::getInstance();
     storage.initialize("settings.txt");
-    setting = new Setting(storage.load());
+    g_setting = std::make_unique<Setting>(storage.load());
 
-    input = new WebInput();
-    renderer = new WebRenderer();
-    engine = new SoloEngine(setting, input, renderer);
-    engine->init(false);
+    g_input = std::make_unique<WebInput>();
+    g_renderer = std::make_unique<WebRenderer>();
+    g_engine = std::make_unique<SoloEngine>(g_setting.get(), g_input.get(), g_renderer.get());
+    g_engine->init(kIsServer);
 }
 
 static void frame()
 {
-    if (engine == nullptr) return;
+    if (g_engine == nullptr) return;
 
-    if (!engine->run(false)) {
-        renderer->render_game_over();
-        emscripten_cancel_main_loop();
-        loop_running = false;
+    if (!g_engine->run(kIsServer)) {
+        if (g_renderer != nullptr) g_renderer->render_game_over();
+        stop_loop();
     }
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void game_start()
 {
-    if (engine == nullptr) init_game();
-    if (loop_running) return;
+    if (g_engine == nullptr) init_game();
+    if (g_loop_running) return;
 
     emscripten_set_main_loop(frame, 0, 1);
-    loop_running = true;
+    g_loop_running = true;
 }
 
 extern "C" EMSCRIPTEN_KEEPALIVE void game_reset()
 {
-    if (loop_running) {
-        emscripten_cancel_main_loop();
-        loop_running = false;
-    }
+    stop_loop();
     init_game();
     game_start();
 }

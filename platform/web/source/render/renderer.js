@@ -2,6 +2,7 @@ const ROWS = 22;
 const COLS = 10;
 const CELL = 22;
 
+// mino type 인덱스(0~7)와 1:1 대응 색상표.
 const COLORS = [
   "#00BCD4", // I
   "#FFEB3B", // O
@@ -16,6 +17,7 @@ const COLORS = [
 
 class WebRenderer {
   constructor(moduleRef) {
+    // Emscripten Module 객체(HEAP/ccall 접근용)
     this.Module = moduleRef;
     this.canvas = document.getElementById("game");
     this.ctx = this.canvas.getContext("2d");
@@ -52,15 +54,15 @@ class WebRenderer {
   }
 
   render_timer(sec) {
-    if (this.timerEl) this.timerEl.textContent = String(sec);
+    this.timerEl.textContent = String(sec);
   }
 
   render_score(score) {
-    if (this.scoreEl) this.scoreEl.textContent = String(score);
+    this.scoreEl.textContent = String(score);
   }
 
   render_level(level) {
-    if (this.levelEl) this.levelEl.textContent = String(level);
+    this.levelEl.textContent = String(level);
   }
 
   render_game_over() {
@@ -146,7 +148,7 @@ function mapKeyToEngine(code) {
       return 0;
   }
 }
-
+// shell.html moule 객체에 webRenderer 인스턴스를 붙인다. 
 export function attachRendererToModule(Module) {
   Module.webRenderer = new WebRenderer(Module);
 
