@@ -27,7 +27,7 @@ void LinuxLobbyRenderer::render_client_view_room(
     fflush(stdout);
     printf("ROOM HOST: %s\n", server_id);
     for (const auto& [key, value] : client_ip_address)
-        printf("%s\n", value.c_str());
+        printf("%s\n", key.c_str());
     printf("Press Any key + enter for get out room\n");
 }
 

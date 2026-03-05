@@ -193,7 +193,6 @@ bool LinuxLobbyNetwork::recv_udp(user_data& ud, char* ip)
 {
     socklen_t addr_len;
     uint8_t buf[USER_DATA_SIZE];
-    bool data_received = false;
     int recv_result;
     int n = epoll_wait(epfd, events, MAX_EVENTS, 0);
 
@@ -226,12 +225,11 @@ bool LinuxLobbyNetwork::recv_udp(user_data& ud, char* ip)
 
                 inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
                 deserialize(buf, ud);
-                data_received = true;
-                break;
+                return true;
             }
         }
     }
-    return data_received;
+    return false;
 }
 
 void LinuxLobbyNetwork::send_udp(const char* room_master_id,
@@ -271,7 +269,6 @@ bool LinuxLobbyNetwork::recv_udp(room_data& rd, char* ip)
 {
     socklen_t addr_len;
     uint8_t buf[ROOM_DATA_SIZE];
-    bool data_received = false;
     int recv_result;
     int n = epoll_wait(epfd, events, MAX_EVENTS, 0);
 
@@ -303,12 +300,11 @@ bool LinuxLobbyNetwork::recv_udp(room_data& rd, char* ip)
 
                 inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
                 deserialize(buf, rd);
-                data_received = true;
-                break;
+                return true;
             }
         }
     }
-    return true;
+    return false;
 }
 
 void LinuxLobbyNetwork::send_multi_udp(

@@ -197,7 +197,6 @@ void LinuxNetwork::send_relay_udp(const Packet& packet,
 bool LinuxNetwork::recv_udp(Packet& recv_pkt)
 {
     uint8_t buf[PACKET_SIZE];
-    bool data_received = false;
     int n = epoll_wait(epfd, events, MAX_EVENTS, 0);
     int r;
 
@@ -230,12 +229,11 @@ bool LinuxNetwork::recv_udp(Packet& recv_pkt)
                     return false;
 
                 deserialize(buf, recv_pkt);
-                data_received = true;
-                break;
+                return true;
             }
         }
     }
-    return data_received;
+    return false;
 }
 
 LinuxNetwork::~LinuxNetwork()
