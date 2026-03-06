@@ -5,9 +5,8 @@
 
 using namespace std;
 
-Lobby::Lobby(ILobbyNetwork* lobby_network,
-                       ILobbyRenderer* lobby_renderer,
-                       ILobbyInputHandler* lobby_input_handler)
+Lobby::Lobby(ILobbyNetwork* lobby_network, ILobbyRenderer* lobby_renderer,
+             ILobbyInputHandler* lobby_input_handler, Setting* setting)
     : lobby_network(lobby_network), lobby_renderer(lobby_renderer),
       lobby_input_handler(lobby_input_handler)
 {
@@ -16,18 +15,24 @@ Lobby::Lobby(ILobbyNetwork* lobby_network,
 bool Lobby::start()
 {
     int choice;
+
+    set_nickname();
+    lobby_renderer->render_clear();
+}
+
+void Lobby::set_nickname()
+{
     lobby_renderer->render_clear();
 
-    while (true) {
-        lobby_renderer->render_select();
-        lobby_input_handler->scan(&choice, 1);
-        if (choice == 1) {
-            if (open_room()) return true;
-        }
-        else if (choice == 2) {
-            if (enter_room()) return false;
-        }
+    lobby_renderer->render_input_window({27, 20}, "Type your nickname.[length : 1 ~ 8]");
+    string nickname = lobby_input_handler->get_line();
+
+    if (!nickname.empty() && nickname.size() <= 8) {
+        setting->nick_name = nickname;
     }
+
+    reload();
+    lobby_renderer->render_clear();
 }
 
 bool Lobby::open_room()
@@ -57,17 +62,16 @@ bool Lobby::open_room()
         if (lobby_input_handler->scan(s, sizeof(s), 0) == 1) {
             if (strcmp(s, "q") == 0) {
                 lobby_renderer->render_clear();
-                lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 0,
-                                              0, 0, 0, 1, broadcast_ip);
+                lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 0, 0, 0,
+                                        0, 1, broadcast_ip);
                 is_game_start = false;
                 break;
             }
             else {
-                lobby_network->send_multi_udp(my_id, client_ip_address,
-                                                    client_ip_address.size(), 0, 1, 0, 0, 0,
-                                                    client_ip_address);
-                lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 0,
-                                              0, 0, 0, 1, broadcast_ip);
+                lobby_network->send_multi_udp(my_id, client_ip_address, client_ip_address.size(), 0,
+                                              1, 0, 0, 0, client_ip_address);
+                lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 0, 0, 0,
+                                        0, 1, broadcast_ip);
                 is_game_start = true;
                 break;
             }
@@ -75,8 +79,8 @@ bool Lobby::open_room()
 
         if (std::chrono::steady_clock::now() - base_time >= std::chrono::milliseconds(5000)) {
             base_time = std::chrono::steady_clock::now();
-            lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 0, 0,
-                                          1, 0, 0, broadcast_ip);
+            lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 0, 0, 1, 0,
+                                    0, broadcast_ip);
         }
 
         memset(ip, 16, sizeof(ip));
@@ -86,8 +90,8 @@ bool Lobby::open_room()
         if (index >= 4 ||
             (received_data.is_enter == true &&
              client_ip_address.find(std::string(received_data.id)) != client_ip_address.end()))
-             lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 1, 0,
-                                          0, 0, 0, broadcast_ip);
+            lobby_network->send_udp(my_id, client_ip_address, client_ip_address.size(), 1, 0, 0, 0,
+                                    0, broadcast_ip);
         else {
             if (received_data.is_enter == true) {
                 client_ip_address[std::string(received_data.id)] = std::string(ip);
@@ -148,8 +152,7 @@ bool Lobby::enter_room()
         if (received_data.is_broadcast &&
             server_ip_address.find(std::string(room_ip)) == server_ip_address.end()) {
             server_ip_address[std::string(room_ip)] = std::string(received_data.room_master_id);
-            if (is_in_room == false)
-                lobby_renderer->render_view_enter_room(server_ip_address);
+            if (is_in_room == false) lobby_renderer->render_view_enter_room(server_ip_address);
         }
         else if (received_data.is_broadcast_delete) {
             server_ip_address.erase(std::string(room_ip));
@@ -170,7 +173,7 @@ bool Lobby::enter_room()
             }
             if (is_in_room == true)
                 lobby_renderer->render_client_view_room(received_data.room_master_id,
-                                                          client_ip_address);
+                                                        client_ip_address);
             else
                 lobby_renderer->render_view_enter_room(server_ip_address);
         }
@@ -201,10 +204,7 @@ void Lobby::finish()
     delete lobby_input_handler;
 }
 
-const char* Lobby::get_client_ip_address(string key)
-{
-    return client_ip_address[key].c_str();
-}
+const char* Lobby::get_client_ip_address(string key) { return client_ip_address[key].c_str(); }
 
 std::vector<std::pair<std::string, std::string>> Lobby::get_client_ids_ips()
 {
@@ -220,11 +220,9 @@ std::unordered_map<std::string, std::string> Lobby::get_ids(bool is_server)
     std::unordered_map<std::string, std::string> m;
     for (const auto& [key, value] : client_ip_address) {
         m[key] = "";
-        if (is_server == false)
-            m[value] = "";
+        if (is_server == false) m[value] = "";
     }
-    if (is_server)
-        m[std::string(my_id)] = "";
+    if (is_server) m[std::string(my_id)] = "";
     return m;
 }
 
