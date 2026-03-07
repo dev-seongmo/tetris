@@ -1,28 +1,70 @@
 #include "render/linux_lobby_renderer.hpp"
 
+#include "entrance.hpp"
+#include "i_platform_renderer.hpp"
+
+#include <string>
+
+using namespace std;
+
 LinuxLobbyRenderer::LinuxLobbyRenderer(const InputWindowRenderer& input_render,
-                                       const TextRenderer& text_render)
-    : input_window_renderer(input_render), text_renderer(text_render)
+                                       const TextRenderer& text_render,
+                                       IPlatformRenderer* i_platform_renderer)
+    : input_window_renderer(input_render), text_renderer(text_render),
+      platform_renderer(i_platform_renderer)
 {
 }
 
-void LinuxLobbyRenderer::render_input_window(int x, int y, const std::string& str)
+void LinuxLobbyRenderer::render_input_window(int x, int y, const string& str)
 {
     input_window_renderer.render_input_window({x, y}, str);
 }
 
-void LinuxLobbyRenderer::render_big_text(int x, int y, const std::string& str)
+void LinuxLobbyRenderer::render_big_text(int x, int y, const string& str)
 {
     text_renderer.print_big_string({x, y}, str);
 }
 
-void LinuxLobbyRenderer::render_small_text(int x, int y, const std::string& str)
+void LinuxLobbyRenderer::render_small_text(int x, int y, const string& str)
 {
     text_renderer.print_small_string({x, y}, str, Color::CYAN);
 }
 
-void LinuxLobbyRenderer::render_server_view_room(
-    char* server_id, std::unordered_map<std::string, std::string> client_ip_address)
+void LinuxLobbyRenderer::render_set_nickname(const string& cur_nickname)
+{
+    render_clear();
+    render_big_text(20, 7, "SET NICKNAME");
+    render_small_text(27, 18, cur_nickname);
+    render_input_window(27, 20, "type your nickname.[length : 1 ~ 8]");
+}
+void LinuxLobbyRenderer::render_entrance()
+{
+    render_clear();
+    render_big_text(12, 10, "ENTRANCE");
+}
+
+void LinuxLobbyRenderer::render_entrance_choice(Entrance entrance)
+{
+    const int X = 25, Y = 18;
+    string text;
+    Color text_color;
+    platform_renderer->hide_cursor();
+
+    for (int i = 0; i < ENTRANCE_COUNT; ++i) {
+        platform_renderer->set_cursor(X, Y + i * 2);
+
+        int title_num = static_cast<int>(entrance);
+        Color text_color = (title_num == i) ? Color::CYAN : Color::COMMENT;
+        string text = (title_num == i) ? " > " : "   ";
+
+        text += ENTRANCE_TITLE[i];
+
+        platform_renderer->print_s(text, text_color);
+    }
+}
+
+void LinuxLobbyRenderer::render_server_view_room(char* server_id,
+                                                 unordered_map<string, string> client_ip_address)
 {
     printf("\033[2J\033[1;1H");
     fflush(stdout);
@@ -41,8 +83,8 @@ void LinuxLobbyRenderer::render_user_id_input()
     fflush(stdout);
 }
 
-void LinuxLobbyRenderer::render_client_view_room(
-    char* server_id, std::unordered_map<std::string, std::string> client_ip_address)
+void LinuxLobbyRenderer::render_client_view_room(char* server_id,
+                                                 unordered_map<string, string> client_ip_address)
 {
     printf("\033[2J\033[1;1H");
     fflush(stdout);
@@ -52,8 +94,7 @@ void LinuxLobbyRenderer::render_client_view_room(
     printf("Press Any key + enter for get out room\n");
 }
 
-void LinuxLobbyRenderer::render_view_enter_room(
-    std::unordered_map<std::string, std::string> server_ip_address)
+void LinuxLobbyRenderer::render_view_enter_room(unordered_map<string, string> server_ip_address)
 {
     printf("\033[2J\033[1;1H");
     fflush(stdout);
@@ -62,11 +103,7 @@ void LinuxLobbyRenderer::render_view_enter_room(
     printf("Get Room constantly...(exit q + enter)\n");
 }
 
-void LinuxLobbyRenderer::render_clear()
-{
-    printf("\033[2J\033[1;1H");
-    fflush(stdout);
-}
+void LinuxLobbyRenderer::render_clear() { platform_renderer->clear(); }
 
 void LinuxLobbyRenderer::render_select()
 {

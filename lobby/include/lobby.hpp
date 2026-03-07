@@ -3,6 +3,8 @@
 
 #define ROOM_PORT 44111
 
+#include "app_state.hpp"
+#include "entrance.hpp"
 #include "i_lobby_input_handler.hpp"
 #include "i_lobby_network.hpp"
 #include "i_lobby_renderer.hpp"
@@ -22,6 +24,7 @@ class Lobby
     char selected_server_ip_address[16];
     char my_id[9];
     Setting* setting;
+    Entrance entrance = Entrance::CREATE_ROOM;
     ILobbyNetwork* network;
     ILobbyRenderer* render;
     ILobbyInputHandler* input;
@@ -32,7 +35,7 @@ class Lobby
 
     void set_nickname();
 
-    void reload();
+    void choose_entrance();
 
     /**
      * @brief (서버)방을 열고 다른 사용자들의 ip 주소를 저장하게 하는 함수
@@ -51,7 +54,7 @@ class Lobby
     /**
      * @brief 현재 어떤 모드로 들어갈지 확인하는 함수
      */
-    bool start();
+    AppState start();
 
     void finish();
 

@@ -1,15 +1,17 @@
 #ifndef __I_LOBBY_RENDERER_HPP__
 #define __I_LOBBY_RENDERER_HPP__
 
+#include "entrance.hpp"
+
 #include <string>
 #include <unordered_map>
 
 class ILobbyRenderer
 {
   public:
-    virtual void render_big_text(int x, int y, const std::string&) = 0;
-    virtual void render_small_text(int x, int y, const std::string&) = 0;
-    virtual void render_input_window(int x, int y, const std::string&) = 0;
+    virtual void render_set_nickname(const std::string&) = 0;
+    virtual void render_entrance() = 0;
+    virtual void render_entrance_choice(Entrance entrance) = 0;
     virtual void
     render_server_view_room(char* server_id,
                             std::unordered_map<std::string, std::string> client_ip_address) = 0;

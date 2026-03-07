@@ -2,6 +2,7 @@
 #define __LINUX_LOBBY_RENDERER_HPP__
 
 #include "i_lobby_renderer.hpp"
+#include "i_platform_renderer.hpp"
 #include "render/input_window_renderer.hpp"
 #include "render/text_renderer.hpp"
 
@@ -13,12 +14,16 @@ class LinuxLobbyRenderer : public ILobbyRenderer
   private:
     InputWindowRenderer input_window_renderer;
     TextRenderer text_renderer;
+    IPlatformRenderer* platform_renderer;
+    void render_input_window(int x, int y, const std::string&);
+    void render_big_text(int x, int y, const std::string&);
+    void render_small_text(int x, int y, const std::string&);
 
   public:
-    LinuxLobbyRenderer(const InputWindowRenderer&, const TextRenderer&);
-    void render_input_window(int x, int y, const std::string&) override;
-    void render_big_text(int x, int y, const std::string&) override;
-    void render_small_text(int x, int y, const std::string&) override;
+    LinuxLobbyRenderer(const InputWindowRenderer&, const TextRenderer&, IPlatformRenderer*);
+    void render_set_nickname(const std::string&) override;
+    void render_entrance() override;
+    void render_entrance_choice(Entrance entrance) override;
     void render_server_view_room(
         char* server_id, std::unordered_map<std::string, std::string> client_ip_address) override;
     void render_user_id_input() override;

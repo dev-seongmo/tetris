@@ -67,7 +67,7 @@ int main()
             state = run_single_game();
             break;
 
-        case AppState::MULTI_PLAY:
+        case AppState::LOBBY:
             state = run_multi_game();
             break;
 
@@ -184,6 +184,7 @@ AppState run_single_game()
 
 AppState run_multi_game()
 {
+    bool is_server;
     bool is_run_continue = true;
     bool is_stop_continue = true;
 
@@ -195,7 +196,20 @@ AppState run_multi_game()
     ILobbyInputHandler* linux_lobby_input_handler = input_factory->create_lobby_input_handler();
     Lobby* lobby =
         new Lobby(setting, linux_lobby_network, linux_lobby_renderer, linux_lobby_input_handler);
-    bool is_server = lobby->start();
+
+    AppState lobby_state = lobby->start();
+
+    switch (lobby_state) {
+    case AppState::MULTI_SERVER:
+        is_server = true;
+        break;
+    case AppState::MULTI_CLIENT:
+        is_server = false;
+        break;
+
+    default: // default fallback : MENU
+        return AppState::MENU;
+    }
 
     LinuxMultiRenderer linux_renderer = render_factory.create_linux_multi_renderer();
     renderer = &linux_renderer;

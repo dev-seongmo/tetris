@@ -1,5 +1,10 @@
 #include "lobby.hpp"
 
+#include "app_state.hpp"
+#include "entrance.hpp"
+#include "i_input_handler.hpp"
+#include "setting_storage.hpp"
+
 #include <chrono>
 #include <cstring>
 
@@ -11,9 +16,22 @@ Lobby::Lobby(Setting* setting, ILobbyNetwork* network, ILobbyRenderer* render,
 {
 }
 
-bool Lobby::start()
+AppState Lobby::start()
 {
     set_nickname();
+    choose_entrance();
+
+    switch (entrance) {
+    case Entrance::CREATE_ROOM:
+        break;
+    case Entrance::ENTER_ROOM:
+        break;
+    case Entrance::EXIT:
+        return AppState::MENU;
+    case Entrance::COUNT:
+        break;
+    }
+
     int choice;
 
     while (true) {
@@ -21,10 +39,10 @@ bool Lobby::start()
         render->render_select();
         input->scan(&choice, 1);
         if (choice == 1) {
-            if (open_room()) return true;
+            if (open_room()) return AppState::MULTI_SERVER;
         }
         else if (choice == 2) {
-            if (enter_room()) return false;
+            if (enter_room()) return AppState::MULTI_CLIENT;
         }
         render->render_clear();
     }
@@ -33,24 +51,44 @@ bool Lobby::start()
 void Lobby::set_nickname()
 {
     char nickname[9];
-    string cur_nickname = "Current Nickname : [ " + setting->nick_name + " ]";
 
-    render->render_clear();
-    render->render_big_text(20, 7, "SET NICKNAME");
-    render->render_small_text(27, 18, cur_nickname);
-    render->render_input_window(27, 20, "type your nickname.[length : 1 ~ 8]");
+    SettingStorage& setting_storage = SettingStorage::getInstance();
+    render->render_set_nickname("Current Nickname : [ " + setting->nick_name + " ]");
 
     while (true) {
         input->scan(nickname, 8, true);
 
         if (nickname[0] != '\0') {
             setting->nick_name = nickname;
+            setting_storage.save(*setting);
             break;
         }
     }
 }
 
-void Lobby::reload() {}
+void Lobby::choose_entrance()
+{
+    int in;
+    render->render_entrance();
+
+    while (true) {
+        in = input->scan();
+
+        if (in == Arrow::KEY_UP || in == Arrow::KEY_LEFT) {
+            entrance--;
+        }
+
+        else if (in == Arrow::KEY_DOWN || in == Arrow::KEY_RIGHT) {
+            entrance++;
+        }
+
+        if (in == '\n' || in == ' ') {
+            return;
+        }
+
+        render->render_entrance_choice(entrance);
+    }
+}
 
 bool Lobby::open_room()
 {
