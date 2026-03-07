@@ -7,6 +7,9 @@ project(
   LANGUAGES CXX
 )
 
+
+option(ENABLE_TEST "Enable Test" ON)
+
 # 윈도우 std::byte 오류 해결용
 if (WIN32)
     add_compile_definitions(_HAS_STD_BYTE=0)
@@ -14,10 +17,13 @@ endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set_property(DIRECTORY PROPERTY
-  CMAKE_CXX_CLANG_TIDY
-  "clang-tidy;-warnings-as-errors=*"
-)
+# 웹에서 clang tidy 사용 안함  
+if (NOT EMSCRIPTEN)
+    set_property(DIRECTORY PROPERTY
+      CMAKE_CXX_CLANG_TIDY
+      "clang-tidy;-warnings-as-errors=*"
+    )
+endif()
 
 option(USE_WPF "Build WPF UI" OFF)
 option(ENABLE_COVERAGE "Enable code coverage" OFF)
@@ -38,8 +44,19 @@ add_subdirectory(lobby/source)
 add_subdirectory(menu/source)
 add_subdirectory(setting/source)
 
-# 리눅스 터미널 UI 빌드
-if (UNIX)
+# 웹 빌드
+if (EMSCRIPTEN)
+    message(STATUS "Building for WebAssembly (Emscripten)")
+    set(CMAKE_EXECUTABLE_SUFFIX ".html")
+    add_subdirectory(platform/web/source/input)
+    add_subdirectory(platform/web/source/network)
+    add_subdirectory(platform/web/source/main)
+    add_subdirectory(platform/web/source/render)
+
+    # 링커 옵션 (SDL2 사용 시 필수)
+    #add_link_options("-sUSE_SDL=2" "-sUSE_SDL_TTF=2")
+
+elseif (UNIX)
     add_subdirectory(platform/common/source/render)
     add_subdirectory(platform/linux/source/input)
     add_subdirectory(platform/linux/source/render)
@@ -68,10 +85,14 @@ elseif (WIN32)
         add_subdirectory(platform/window/source/lobby_renderer)
         add_subdirectory(platform/window/source/util)
         add_subdirectory(platform/window/source/main)
+        
         #터미널 구조에 맞게 수정했습니다. 
     # 윈도우 터미널 UI 빌드 -> tetris.exe 생성
     endif()
 
 endif()
 
-add_subdirectory(test)
+# 테스트는 웹 빌드가 아닐 때만 추가
+if (NOT EMSCRIPTEN AND ENABLE_TEST)
+    add_subdirectory(test)
+endif()

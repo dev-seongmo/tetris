@@ -62,5 +62,8 @@ llvm.sh
 
 
 # vs
+build_wasm
 .vs
 .vscode
+
+.cache
