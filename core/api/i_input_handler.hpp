@@ -3,10 +3,17 @@
 
 enum Arrow
 {
-  KEY_UP = 1000,
-  KEY_DOWN,
-  KEY_LEFT,
-  KEY_RIGHT
+    KEY_UP = 1000,
+    KEY_DOWN,
+    KEY_LEFT,
+    KEY_RIGHT,
+};
+
+enum Key
+{
+    ENTER = 10,
+    ESC = 27,
+    SPACE = 32,
 };
 
 class IInputHandler

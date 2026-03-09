@@ -40,8 +40,8 @@ add_subdirectory(core/source/game_rule)
 add_subdirectory(core/source/tetromino)
 add_subdirectory(core/source/util)
 add_subdirectory(core/source/engine)
-add_subdirectory(lobby/source)
 add_subdirectory(menu/source)
+add_subdirectory(lobby/source)
 add_subdirectory(setting/source)
 
 # 웹 빌드
@@ -62,7 +62,6 @@ elseif (UNIX)
     add_subdirectory(platform/linux/source/render)
     add_subdirectory(platform/linux/source/network)
     add_subdirectory(platform/linux/source/lobby_network)
-    add_subdirectory(platform/linux/source/lobby_renderer)
     add_subdirectory(platform/linux/source/util)
     add_subdirectory(platform/linux/source/main)
     set_target_properties(tetris PROPERTIES
