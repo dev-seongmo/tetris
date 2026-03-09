@@ -50,7 +50,7 @@ class Lobby
     /**
      * @brief (클라이언트)방에 입장하는 함수
      */
-    bool enter_room();
+    bool enter_lobby();
 
   public:
     Lobby(Setting* setting, ILobbyNetwork* network, ILobbyRenderer* render,

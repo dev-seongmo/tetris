@@ -18,7 +18,8 @@ class LinuxLobbyRenderer : public ILobbyRenderer
     IPlatformRenderer* platform_renderer;
     void render_input_window(int x, int y, const std::string&);
     void render_big_text(int x, int y, const std::string&);
-    void render_small_text(int x, int y, const std::string&);
+    void render_big_text(int x, int y, const std::string&, Color);
+    void render_small_text(int x, int y, const std::string&, Color);
 
   public:
     LinuxLobbyRenderer(const InputWindowRenderer&, const TextRenderer&, IPlatformRenderer*);
@@ -26,8 +27,10 @@ class LinuxLobbyRenderer : public ILobbyRenderer
     void render_entrance() override;
     void render_entrance_choice(Entrance entrance) override;
     void render_create_room() override;
-    void render_lobby(const std::string& room_name, const std::string& host_name) override;
-    void render_lobby_clients(std::vector<std::string>&) override;
+    void render_room(const std::string& room_name, const std::string& host_name) override;
+    void render_room_clients(std::vector<std::string>&) override;
+    void render_lobby() override;
+    void render_lobby_rooms(std::vector<std::string>&, int) override;
     void render_server_view_room(
         char* server_id, std::unordered_map<std::string, std::string> client_ip_address) override;
     void render_user_id_input() override;

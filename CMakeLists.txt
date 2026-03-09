@@ -40,8 +40,8 @@ add_subdirectory(core/source/game_rule)
 add_subdirectory(core/source/tetromino)
 add_subdirectory(core/source/util)
 add_subdirectory(core/source/engine)
-add_subdirectory(lobby/source)
 add_subdirectory(menu/source)
+add_subdirectory(lobby/source)
 add_subdirectory(setting/source)
 
 # 웹 빌드
