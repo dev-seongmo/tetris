@@ -27,10 +27,10 @@ class LinuxLobbyRenderer : public ILobbyRenderer
     void render_entrance() override;
     void render_entrance_choice(Entrance entrance) override;
     void render_create_room() override;
-    void render_room(const std::string& room_name, const std::string& host_name) override;
-    void render_room_clients(std::vector<std::string>&) override;
+    void render_room(const std::string& room_name, const std::string& host_name, bool is_server) override;
+    void render_room_clients(std::unordered_map<std::string, std::string>&) override;
     void render_lobby() override;
-    void render_lobby_rooms(std::vector<std::string>&, int) override;
+    void render_lobby_rooms(std::vector<std::pair<std::string, std::string>>&, int) override;
     void render_server_view_room(
         char* server_id, std::unordered_map<std::string, std::string> client_ip_address) override;
     void render_user_id_input() override;

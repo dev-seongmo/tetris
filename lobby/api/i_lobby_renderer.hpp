@@ -14,10 +14,10 @@ class ILobbyRenderer
     virtual void render_entrance() = 0;
     virtual void render_entrance_choice(Entrance) = 0;
     virtual void render_create_room() = 0;
-    virtual void render_room(const std::string& room_name, const std::string& host_name) = 0;
-    virtual void render_room_clients(std::vector<std::string>&) = 0;
+    virtual void render_room(const std::string& room_name, const std::string& host_name, bool is_server) = 0;
+    virtual void render_room_clients(std::unordered_map<std::string, std::string>&) = 0;
     virtual void render_lobby() = 0;
-    virtual void render_lobby_rooms(std::vector<std::string>&, int) = 0;
+    virtual void render_lobby_rooms(std::vector<std::pair<std::string, std::string>>&, int) = 0;
     virtual void
     render_server_view_room(char* server_id,
                             std::unordered_map<std::string, std::string> client_ip_address) = 0;
