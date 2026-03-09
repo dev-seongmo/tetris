@@ -138,6 +138,7 @@ void WindowLobbyNetwork::serialize(uint8_t* buf, const user_data& pkt)
 {
     uint8_t* p = buf;
 
+    write_32b(p, pkt.magic);
     write_bytes(p, pkt.id, 9);
     write_32b(p, pkt.is_enter);
 }
@@ -146,6 +147,7 @@ void WindowLobbyNetwork::deserialize(const uint8_t* buf, user_data& pkt)
 {
     const uint8_t* p = buf;
 
+    pkt.magic = read_32b(p);
     read_bytes(p, pkt.id, 9);
     pkt.id[8] = '\0';
     pkt.is_enter = read_32b(p);
@@ -155,7 +157,8 @@ void WindowLobbyNetwork::deserialize(const uint8_t* buf, user_data& pkt)
 void WindowLobbyNetwork::serialize(uint8_t* buf, const room_data& pkt)
 {
     uint8_t* p = buf;
-
+    
+    write_32b(p, pkt.magic);
     write_bytes(p, pkt.room_master_id, 9);
     for (int i = 0; i < 4; ++i)
     {
@@ -173,6 +176,7 @@ void WindowLobbyNetwork::deserialize(const uint8_t* buf, room_data& pkt)
 {
     const uint8_t* p = buf;
 
+    pkt.magic = read_32b(p);
     read_bytes(p, pkt.room_master_id, 9);
     pkt.room_master_id[8] = '\0';
     for (int i = 0; i < 4; ++i) {
@@ -201,6 +205,7 @@ void WindowLobbyNetwork::send_udp(const char* id, int is_enter, const char* send
     addr.sin_port = htons(LOBBY_PORT);
     inet_pton(AF_INET, send_ip, &addr.sin_addr);
     
+    data.magic = USER_DATA_MAGIC;
     snprintf(data.id, sizeof(data.id), "%s", id);
     data.is_enter = is_enter;
     serialize(buf, data);
@@ -239,6 +244,10 @@ bool WindowLobbyNetwork::recv_udp(user_data& ud, char* ip)
 
     inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
     deserialize(buf, ud);
+
+    if (ud.magic != USER_DATA_MAGIC)
+        return false;
+
     return true;
 }
 
@@ -261,6 +270,7 @@ void WindowLobbyNetwork::send_udp(const char* room_master_id,
     addr.sin_port = htons(LOBBY_PORT);
     inet_pton(AF_INET, send_ip, &addr.sin_addr);
 
+    data.magic = ROOM_DATA_MAGIC;
     snprintf(data.room_master_id, sizeof(data.room_master_id), "%s", room_master_id);
     for (const auto& [id, ip] : ids_ips)
         snprintf(data.id[index++], sizeof(data.id[0]), "%s", id.c_str());
@@ -305,6 +315,10 @@ bool WindowLobbyNetwork::recv_udp(room_data& rd, char* ip)
 
     inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
     deserialize(buf, rd);
+
+    if (rd.magic != ROOM_DATA_MAGIC)
+        return false;
+
     return true;
 }
 

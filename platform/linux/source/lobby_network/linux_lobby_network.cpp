@@ -119,6 +119,7 @@ void LinuxLobbyNetwork::serialize(uint8_t* buf, const user_data& pkt)
 {
     uint8_t* p = buf;
 
+    write_32b(p, pkt.magic);
     write_bytes(p, pkt.id, 9);
     write_32b(p, pkt.is_enter);
 }
@@ -127,6 +128,7 @@ void LinuxLobbyNetwork::deserialize(const uint8_t* buf, user_data& pkt)
 {
     const uint8_t* p = buf;
 
+    pkt.magic = read_32b(p);
     read_bytes(p, pkt.id, 9);
     pkt.id[8] = '\0';
     pkt.is_enter = read_32b(p);
@@ -137,6 +139,7 @@ void LinuxLobbyNetwork::serialize(uint8_t* buf, const room_data& pkt)
 {
     uint8_t* p = buf;
 
+    write_32b(p, pkt.magic);
     write_bytes(p, pkt.room_master_id, 9);
     for (int i = 0; i < 4; ++i)
     {
@@ -154,6 +157,7 @@ void LinuxLobbyNetwork::deserialize(const uint8_t* buf, room_data& pkt)
 {
     const uint8_t* p = buf;
 
+    pkt.magic = read_32b(p);
     read_bytes(p, pkt.room_master_id, 9);
     pkt.room_master_id[8] = '\0';
     for (int i = 0; i < 4; ++i) {
@@ -181,6 +185,7 @@ void LinuxLobbyNetwork::send_udp(const char* id, int is_enter, const char* send_
     addr.sin_port = htons(LOBBY_PORT);
     inet_pton(AF_INET, send_ip, &addr.sin_addr);
     
+    data.magic = USER_DATA_MAGIC;
     snprintf(data.id, sizeof(data.id), "%s", id);
     data.is_enter = is_enter;
     serialize(buf, data);
@@ -205,28 +210,30 @@ bool LinuxLobbyNetwork::recv_udp(user_data& ud, char* ip)
 
     for (int i = 0; i < n; ++i) {
         if ((events[i].events & EPOLLIN) != 0) {
-            while (true) {
-                sockaddr_in addr{};
-                addr_len = sizeof(addr);
-                memset(buf, 0, sizeof(buf));
+            sockaddr_in addr{};
+            addr_len = sizeof(addr);
+            memset(buf, 0, sizeof(buf));
 
-                recv_result = recvfrom(sock, (char*) buf, sizeof(buf), 0, (sockaddr*) &addr, &addr_len);
-                if (recv_result < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                        // clear receive buffer
-                        break;
-                    else {
-                        perror("recvfrom failed: ");
-                        return false;
-                   }
-                }
-                else if (recv_result != USER_DATA_SIZE)
-                    return false;
-
-                inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
-                deserialize(buf, ud);
-                return true;
+            recv_result = recvfrom(sock, (char*) buf, sizeof(buf), 0, (sockaddr*) &addr, &addr_len);
+            if (recv_result < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    // clear receive buffer
+                    break;
+                else {
+                    perror("recvfrom failed: ");
+                    break;
+               }
             }
+            else if (recv_result != USER_DATA_SIZE)
+                break;
+
+            inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
+            deserialize(buf, ud);
+            
+            if(ud.magic != USER_DATA_MAGIC)
+                break;
+
+            return true;
         }
     }
     return false;
@@ -250,6 +257,7 @@ void LinuxLobbyNetwork::send_udp(const char* room_master_id,
     addr.sin_port = htons(LOBBY_PORT);
     inet_pton(AF_INET, send_ip, &addr.sin_addr);
 
+    data.magic = ROOM_DATA_MAGIC;
     snprintf(data.room_master_id, sizeof(data.room_master_id), "%s", room_master_id);
     for (const auto& [id, ip] : ids_ips)
         snprintf(data.id[index++], sizeof(data.id[0]), "%s", id.c_str());
@@ -281,27 +289,29 @@ bool LinuxLobbyNetwork::recv_udp(room_data& rd, char* ip)
 
     for (int i = 0; i < n; ++i) {
         if ((events[i].events & EPOLLIN) != 0) {
-            while (true) {
-                sockaddr_in addr{};
-                addr_len = sizeof(addr);
-                memset(buf, 0, sizeof(buf));
-                recv_result = recvfrom(sock, (char*) buf, sizeof(buf), 0, (sockaddr*) &addr, &addr_len);
-                if (recv_result < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK)
-                        // clear receive buffer
-                        return false;
-                    else {
-                        perror("recvfrom failed: ");
-                        return false;
-                    }
+            sockaddr_in addr{};
+            addr_len = sizeof(addr);
+            memset(buf, 0, sizeof(buf));
+            recv_result = recvfrom(sock, (char*) buf, sizeof(buf), 0, (sockaddr*) &addr, &addr_len);
+            if (recv_result < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK)
+                    // clear receive buffer
+                    break;
+                else {
+                    perror("recvfrom failed: ");
+                    break;
                 }
-                else if (recv_result != ROOM_DATA_SIZE)
-                    return false;
-
-                inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
-                deserialize(buf, rd);
-                return true;
             }
+            else if (recv_result != ROOM_DATA_SIZE)
+                break;
+
+            inet_ntop(AF_INET, &addr.sin_addr, ip, 16);
+            deserialize(buf, rd);
+
+            if (rd.magic != ROOM_DATA_MAGIC)
+                break;
+
+            return true;
         }
     }
     return false;
