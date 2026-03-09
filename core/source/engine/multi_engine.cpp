@@ -182,7 +182,7 @@ bool MultiEngine::stop(bool is_server)
 
     return true;
 out:
-    while (three_sec_over > 6) {
+    while (three_sec_over < 7) {
         timer.set_curr_time();
         if (timer.check_500ms_time()) {
             if (is_server)
