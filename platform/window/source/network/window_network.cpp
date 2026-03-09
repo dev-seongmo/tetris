@@ -72,6 +72,8 @@ void WindowNetwork::serialize(uint8_t* buf, const Packet& pkt)
 {
     uint8_t* p = buf;
 
+    write_32b(p, pkt.magic);
+
     for (int i = 0; i < 20; ++i)
         for (int j = 0; j < 10; ++j)
             write_32b(p, pkt.board[i][j]);
@@ -105,6 +107,8 @@ void WindowNetwork::deserialize(const uint8_t* buf, Packet& pkt)
 {
     const uint8_t* p = buf;
 
+    pkt.magic = read_32b(p);
+
     for (int i = 0; i < 20; ++i)
         for (int j = 0; j < 10; ++j)
             pkt.board[i][j] = read_32b(p);
@@ -136,6 +140,9 @@ void WindowNetwork::send_udp(const Board& board, const Tetromino& tetromino, int
     inet_pton(AF_INET, another_user_ip, &another_user.sin_addr);
 
     // 보드 데이터 복사
+
+    pkt.magic = PACKET_MAGIC;
+
     for (int r = 0; r < 20; ++r)
         for (int c = 0; c < 10; ++c)
             pkt.board[r][c] = board.at(r + 2, c); // 숨겨진 2줄 제외하고 복사
@@ -239,6 +246,10 @@ bool WindowNetwork::recv_udp(Packet& recv_pkt)
 
         // 데이터 수신 성공
         deserialize(buf, recv_pkt);
+
+        if (recv_pkt.magic != PACKET_MAGIC)
+            data_received = false;
+
         data_received = true;
     }
 

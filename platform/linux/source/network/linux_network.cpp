@@ -63,6 +63,8 @@ void LinuxNetwork::serialize(uint8_t* buf, const Packet& pkt)
 {
     uint8_t* p = buf;
 
+    write_32b(p, pkt.magic);
+
     for (int i = 0; i < 20; ++i)
         for (int j = 0; j < 10; ++j)
             write_32b(p, pkt.board[i][j]);
@@ -96,6 +98,8 @@ void LinuxNetwork::deserialize(const uint8_t* buf, Packet& pkt)
 {
     const uint8_t* p = buf;
 
+    pkt.magic = read_32b(p);
+
     for (int i = 0; i < 20; ++i)
         for (int j = 0; j < 10; ++j)
             pkt.board[i][j] = read_32b(p);
@@ -124,6 +128,7 @@ void LinuxNetwork::send_udp(const Board& board, const Tetromino& tetromino, cons
     another_user.sin_port = htons(PORT);
     inet_pton(AF_INET, another_user_ip, &another_user.sin_addr);
 
+    pkt.magic = PACKET_MAGIC;
     for (int r = 0; r < 20; ++r)
         for (int c = 0; c < 10; ++c)
             pkt.board[r][c] = board.at(r + 2, c);
@@ -209,28 +214,30 @@ bool LinuxNetwork::recv_udp(Packet& recv_pkt)
 
     for (int i = 0; i < n; i++) {
         if ((events[i].events & EPOLLIN) != 0) {
-            while (true) {
-                sockaddr_in client{};
-                socklen_t len = sizeof(client);
+            sockaddr_in client{};
+            socklen_t len = sizeof(client);
 
-                r = recvfrom(server_sock, (char*) buf, PACKET_SIZE, 0, (sockaddr*) &client, &len);
+            r = recvfrom(server_sock, (char*) buf, PACKET_SIZE, 0, (sockaddr*) &client, &len);
 
-                if (r < 0) {
-                    if (errno == EAGAIN || errno == EWOULDBLOCK) {
-                        // 수신 버퍼 비움
-                        break;
-                    }
-                    else {
-                        perror("recvfrom");
-                        return false;
-                    }
+            if (r < 0) {
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // 수신 버퍼 비움
+                    break;
                 }
-                else if (r != PACKET_SIZE)
-                    return false;
-
-                deserialize(buf, recv_pkt);
-                return true;
+                else {
+                    perror("recvfrom");
+                    break;
+                }
             }
+            else if (r != PACKET_SIZE)
+                break;
+
+            deserialize(buf, recv_pkt);
+
+            if (recv_pkt.magic != PACKET_MAGIC)
+                break;
+
+            return true;
         }
     }
     return false;
