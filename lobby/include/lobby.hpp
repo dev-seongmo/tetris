@@ -1,8 +1,6 @@
 #ifndef __LOBBY_HPP__
 #define __LOBBY_HPP__
 
-#define ROOM_PORT 44111
-
 #include "app_state.hpp"
 #include "entrance.hpp"
 #include "i_lobby_input_handler.hpp"
