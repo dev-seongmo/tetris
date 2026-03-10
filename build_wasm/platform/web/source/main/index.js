@@ -605,7 +605,7 @@ function createExportWrapper(name, nargs) {
 var wasmBinaryFile;
 
 function findWasmBinary() {
-  return locateFile('tetris.wasm');
+  return locateFile('index.wasm');
 }
 
 function getBinarySync(file) {
