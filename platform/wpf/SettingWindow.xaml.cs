@@ -45,8 +45,6 @@ namespace wpf
             rightRenderer = new BlockRenderer(CanvasRight, 0);
 
             CanvasLeft.Loaded += (s, e) => { RenderSide(); };
-
-            
         }
 
         private void RenderSide()
@@ -70,7 +68,7 @@ namespace wpf
                 if (_shadowEnabled)
                 {
                     tetromino.y++;
-                    leftRenderer.DrawTetromino(tetromino, CustomColors.Theme.Get(ColorKey.Comment));
+                    leftRenderer.DrawTetromino(tetromino, CustomColors.Theme.Get(Color.Comment));
                     tetromino.y--;
                 }
 
@@ -93,7 +91,7 @@ namespace wpf
                 if (_shadowEnabled)
                 {
                     tetromino.y++;
-                    rightRenderer.DrawTetromino(tetromino, CustomColors.Theme.Get(ColorKey.Comment));
+                    rightRenderer.DrawTetromino(tetromino, CustomColors.Theme.Get(Color.Comment));
                     tetromino.y--;
                 }
 

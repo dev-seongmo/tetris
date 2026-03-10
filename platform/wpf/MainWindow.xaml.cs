@@ -28,7 +28,8 @@ namespace wpf
             Callbacks.NextBlockCallback NextCallback,
             Callbacks.TimerCallback timerCallback,
             Callbacks.ScoreCallback scoreCallback,
-            Callbacks.LevelCallback levelCallback
+            Callbacks.LevelCallback levelCallback,
+            Callbacks.FinishCallback finishCallback
         );
 
         [DllImport("engine_wrapper.dll")]
@@ -48,7 +49,6 @@ namespace wpf
         private BlockRenderer holdTitleRenderer;
         private BlockRenderer scoreTitleRenderer;
         private BlockRenderer levelTitleRenderer;
-
         private BlockRenderer boardRenderer;
         private BlockRenderer timerRenderer;
         private BlockRenderer next1Renderer;
@@ -57,6 +57,8 @@ namespace wpf
         private BlockRenderer holdRenderer;
         private BlockRenderer scoreRenderer;
         private BlockRenderer levelRenderer;
+        private BlockRenderer overlayTitleRenderer;
+        private BlockRenderer overlayContentRenderer;
 
 
         Callbacks.ScanCallback scanCallback;
@@ -67,6 +69,9 @@ namespace wpf
         Callbacks.TimerCallback timerCallback;
         Callbacks.ScoreCallback scoreCallback;
         Callbacks.LevelCallback levelCallback;
+        Callbacks.FinishCallback finishCallback;
+
+        bool finished = false;
 
         public MainWindow()
         {
@@ -77,7 +82,7 @@ namespace wpf
             CustomColors.SetTheme(new DynamicTheme());
 
             // 렌더 초기화
-            initRender();
+            InitRender();
 
             // 콜백 등록
             scanCallback = new Callbacks.ScanCallback(SendInput);
@@ -88,22 +93,59 @@ namespace wpf
             timerCallback = new Callbacks.TimerCallback(UpdateTimer);
             scoreCallback = new Callbacks.ScoreCallback(UpdateScore);
             levelCallback = new Callbacks.LevelCallback(UpdateLevel);
+            finishCallback = new Callbacks.FinishCallback(GameFinish);
 
-            register_callbacks(scanCallback, backgroundCallback, boardCallback, holdCallback, nextCallback, timerCallback, scoreCallback, levelCallback);
+            register_callbacks(scanCallback, backgroundCallback, boardCallback, holdCallback, nextCallback, timerCallback, scoreCallback, levelCallback, finishCallback);
+
+            // 게임 실행
+            GameStart();
+        }
+
+        private async void GameStart()
+        {
+            // 타이머 실행
+            await GameStartCountdown();
 
             // 엔진 실행
+            finished = false;
             init_engine();
             run_engine();
         }
 
-        private void initRender()
+        async Task GameStartCountdown()
+        {
+            Overlay.Visibility = Visibility.Visible;
+
+            overlayTitleRenderer.DrawString("READY", -13, -10);
+
+            CanvasOverlayContent.Children.Clear();
+            overlayContentRenderer.DrawString(3.ToString(), 0, 0);
+            await Task.Delay(1000);
+
+            CanvasOverlayContent.Children.Clear();
+            overlayContentRenderer.DrawString(2.ToString(), 0, 0);
+            await Task.Delay(1000);
+
+            CanvasOverlayContent.Children.Clear();
+            overlayContentRenderer.DrawString(1.ToString(), 0, 0);
+            await Task.Delay(1000);
+
+            CanvasOverlayContent.Children.Clear();
+            overlayContentRenderer.DrawString("GO", -3, 0);
+            await Task.Delay(1000);
+
+            CanvasOverlayTitle.Children.Clear();
+            CanvasOverlayContent.Children.Clear();
+            Overlay.Visibility = Visibility.Collapsed;
+        }
+
+        private void InitRender()
         {
             titleRenderer = new BlockRenderer(CanvasTitle, 8);
             nextTitleRenderer = new BlockRenderer(CanvasNextTitle, 5);
             holdTitleRenderer = new BlockRenderer(CanvasHoldTitle, 5);
             scoreTitleRenderer = new BlockRenderer(CanvasScore, 3);
             levelTitleRenderer = new BlockRenderer(CanvasLevel, 3);
-
             boardRenderer = new BlockRenderer(CanvasBoard, 0);
             timerRenderer = new BlockRenderer(CanvasTimer, 5);
             next1Renderer = new BlockRenderer(CanvasNext1, 30);
@@ -112,6 +154,8 @@ namespace wpf
             holdRenderer = new BlockRenderer(CanvasHold, 30);
             scoreRenderer = new BlockRenderer(CanvasScore, 3);
             levelRenderer = new BlockRenderer(CanvasLevel, 3);
+            overlayTitleRenderer = new BlockRenderer(CanvasOverlayTitle, 12);
+            overlayContentRenderer = new BlockRenderer(CanvasOverlayContent, 8);
         }
 
         // 입력 받아서 전송하기
@@ -141,10 +185,10 @@ namespace wpf
             Dispatcher.Invoke(() =>
             {
                 titleRenderer.DrawString("TETRISSEN v1", 0, 4);
-                nextTitleRenderer.DrawString("NEXT", 6, 2, CustomColors.Theme.Get(ColorKey.Cyan));
-                holdTitleRenderer.DrawString("HOLD", 6, 2, CustomColors.Theme.Get(ColorKey.Green));
-                scoreTitleRenderer.DrawString("Score", 6, 2, CustomColors.Theme.Get(ColorKey.Comment));
-                levelTitleRenderer.DrawString("Lv", 6, 2, CustomColors.Theme.Get(ColorKey.Comment));
+                nextTitleRenderer.DrawString("NEXT", 6, 2, CustomColors.Theme.Get(Color.Cyan));
+                holdTitleRenderer.DrawString("HOLD", 6, 2, CustomColors.Theme.Get(Color.Green));
+                scoreTitleRenderer.DrawString("Score", 6, 2, CustomColors.Theme.Get(Color.Comment));
+                levelTitleRenderer.DrawString("Lv", 6, 2, CustomColors.Theme.Get(Color.Comment));
 
                 // 초기 스코어, 레벨 렌더링
                 scoreRenderer.DrawStringCenter("0");
@@ -195,7 +239,7 @@ namespace wpf
             Dispatcher.Invoke(() =>
             {
                 CanvasTimer.Children.Clear();
-                timerRenderer.DrawString(TimeUtility.ConvertSecondToString(value), 3, 10, CustomColors.Theme.Get(ColorKey.Comment));
+                timerRenderer.DrawString(TimeUtility.ConvertSecondToString(value), 3, 10, CustomColors.Theme.Get(Color.Comment));
             });
         }
 
@@ -219,11 +263,41 @@ namespace wpf
             });
         }
 
+        // 게임 종료
+        void GameFinish()
+        {
+            try
+            {
+                if (!finished) finish_engine();
+            }
+            catch { }
+
+            Dispatcher.Invoke(() =>
+            {
+                overlayTitleRenderer.DrawString("GAME OVER", -10, -10);
+                Overlay.Visibility = Visibility.Visible;
+                Overlay2.Visibility = Visibility.Visible;
+            });
+        }
+
+        private void GoHome_Click(object sender, RoutedEventArgs e)
+        {
+            var startWindow = new StartWindow();
+            startWindow.Show();
+            this.Close();
+        }
+
+
+        private void Exit_Click(object sender, RoutedEventArgs e)
+        {
+            this.Close();
+        }
+
         protected override void OnClosed(EventArgs e)
         {
             try
             {
-                finish_engine();
+                if (!finished) finish_engine();
             }
             catch { }
             base.OnClosed(e);

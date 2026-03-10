@@ -1,33 +1,78 @@
 #include "input/linux_input.hpp"
+
+#include <iostream>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/select.h>
-#include <termios.h>
-#include <iostream>
+#include <unistd.h>
 
-static struct termios initial_settings, new_settings;
 
-LinuxInput::LinuxInput()
-{   
-    tcgetattr(0, &initial_settings);
-    new_settings = initial_settings;
-
-    new_settings.c_lflag &= ~(ICANON | ECHO);
-    new_settings.c_cc[VMIN]  = 0;
-    new_settings.c_cc[VTIME] = 0;
-
-    tcsetattr(0, TCSANOW, &new_settings);
+void LinuxInput::enable_noncanonical_noecho() {
+    termios t;
+    
+    if (tcgetattr(STDIN_FILENO, &old) == -1) return;
+    t = old;
+    t.c_lflag &= ~(ICANON | ECHO);
+    t.c_cc[VMIN]  = 0;
+    t.c_cc[VTIME] = 0;
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &t) == -1) return;
+    inited = true;
 }
 
-char LinuxInput::scan()
+void LinuxInput::restore()
 {
-    unsigned char ch;
-    int nread = read(0, &ch, 1);
-    return (nread == 1) ? ch : 0;
+    termios t;
+    
+    tcgetattr(STDIN_FILENO, &old);
+
+    t = old;
+    t.c_lflag |= ICANON | ECHO;
+   
+    tcsetattr(STDIN_FILENO, TCSANOW, &t);
 }
 
-LinuxInput::~LinuxInput()
+int LinuxInput::_kbhit() {
+    timeval tv{0, 0};
+    fd_set fds;
+    FD_ZERO(&fds);
+    FD_SET(STDIN_FILENO, &fds);
+    int r = select(STDIN_FILENO + 1, &fds, nullptr, nullptr, &tv);
+    return (r > 0) && FD_ISSET(STDIN_FILENO, &fds);
+}
+
+int LinuxInput::scan()
 {
-    tcsetattr(0, TCSANOW, &initial_settings);
+    enable_noncanonical_noecho();
+
+    unsigned char ch = '\0';
+
+    while(_kbhit() != 0) {
+        read(0, &ch, 1);
+        if (ch == 27) {
+            unsigned char seq[2];
+            read(0, &seq[0], 1);
+            read(0, &seq[1], 1);
+
+            if (seq[0] == '[') {
+                if (seq[1] == 'A') return Arrow::KEY_UP;
+                if (seq[1] == 'B') return Arrow::KEY_DOWN;
+                if (seq[1] == 'C') return Arrow::KEY_RIGHT;
+                if (seq[1] == 'D') return Arrow::KEY_LEFT;
+            }
+        }
+    }
+
+    return (int)ch;
+}
+
+std::string LinuxInput::get_line()
+{
+    restore();
+
+    std::string s;
+    getline(std::cin, s);
+
+    enable_noncanonical_noecho();
+
+    return s;
 }
