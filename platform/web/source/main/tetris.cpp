@@ -48,8 +48,6 @@ static std::unique_ptr<Setting> g_setting;
 static bool g_loop_initialized = false;
 static bool g_loop_running = false;
 
-static void frame();
-
 void clear_shape_buffer(int* buffer)
 {
     for (int i = 0; i < kShapeCellCount; ++i)
@@ -75,6 +73,8 @@ void export_tetromino_preview(const Tetromino& tetromino, int* shape_buffer, int
     export_shape(tetromino.get_shape(), shape_buffer);
 }
 } // namespace
+
+static void frame();
 
 extern "C" EMSCRIPTEN_KEEPALIVE void web_set_key(int key) { g_last_key = key; }
 extern "C" EMSCRIPTEN_KEEPALIVE int* get_board_ptr() { return g_board_flat; }
@@ -169,15 +169,15 @@ static void pause_loop()
 static void ensure_loop_started()
 {
     if (!g_loop_initialized) {
-        emscripten_set_main_loop(frame, 0, 1);
         g_loop_initialized = true;
         g_loop_running = true;
+        emscripten_set_main_loop(frame, 0, 1);
         return;
     }
 
     if (!g_loop_running) {
-        emscripten_resume_main_loop();
         g_loop_running = true;
+        emscripten_resume_main_loop();
     }
 }
 
