@@ -32,7 +32,7 @@ target_link_options(tetris PRIVATE
   "SHELL:--shell-file=${SHELL_FILE}"
   "SHELL:-sALLOW_MEMORY_GROWTH=1"
   "SHELL:-sEXPORTED_RUNTIME_METHODS=['ccall','cwrap','HEAP32']"
-  "SHELL:-sEXPORTED_FUNCTIONS=['_main','_game_start','_game_reset','_web_set_key','_get_board_ptr','_get_active_shape_ptr','_get_meta_ptr']"
+  "SHELL:-sEXPORTED_FUNCTIONS=['_main','_game_start','_game_reset','_web_set_key','_get_board_ptr','_get_active_shape_ptr','_get_meta_ptr','_get_hold_shape_ptr','_get_hold_meta_ptr','_get_next_shapes_ptr','_get_next_types_ptr']"
 )
 
 set_target_properties(tetris PROPERTIES SUFFIX ".html")

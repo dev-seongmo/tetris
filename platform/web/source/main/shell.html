@@ -1,42 +1,207 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Tetris WASM</title>
   <style>
-    body { margin: 0; background:#0d0f15; color:#e7ebf3; font-family: system-ui, sans-serif; }
-    .wrap { display:flex; gap:18px; padding:16px; align-items:flex-start; }
-    .panel { display:flex; flex-direction:column; gap:10px; min-width:180px; }
-    canvas { background:#000; image-rendering: pixelated; border:1px solid #2a2f3a; }
-    .stat { display:flex; justify-content:space-between; gap:12px; }
-    .btnrow { display:flex; gap:8px; }
-    button { padding:8px 10px; border-radius:8px; border:1px solid #394255; background:#1a2030; color:#e7ebf3; cursor:pointer; }
-    button:hover { background:#242d43; }
-    .help { font-size: 12px; opacity: 0.85; line-height: 1.4; }
+    :root {
+      color-scheme: dark;
+      --bg: #070a10;
+      --panel: #111826;
+      --panel-border: #2b3548;
+      --text: #edf2ff;
+      --muted: #9aa7bd;
+      --accent: #1c2433;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background:
+        radial-gradient(circle at top, rgba(68, 89, 132, 0.22), transparent 36%),
+        linear-gradient(180deg, #0b1020 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: Consolas, "Courier New", monospace;
+    }
+
+    .shell {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      padding: 24px;
+      border: 1px solid var(--panel-border);
+      background: rgba(11, 16, 26, 0.92);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 118px 220px 118px;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .panel {
+      padding: 10px;
+      border: 1px solid var(--panel-border);
+      background: var(--panel);
+    }
+
+    .title {
+      margin-bottom: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-value {
+      font-size: 22px;
+      text-align: right;
+      min-height: 27px;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      image-rendering: pixelated;
+      border: 1px solid var(--panel-border);
+      background: #080b12;
+    }
+
+    #game {
+      width: 220px;
+      height: 440px;
+    }
+
+    .preview {
+      width: 96px;
+      height: 96px;
+    }
+
+    .controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 10px;
+    }
+
+    button {
+      padding: 9px 14px;
+      border: 1px solid #41506b;
+      background: var(--accent);
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+    }
+
+    button:hover {
+      background: #253149;
+    }
+
+    .help {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: nowrap;
+    }
+
+    @media (max-width: 760px) {
+      body {
+        align-items: start;
+      }
+
+      .shell {
+        width: 100%;
+        min-height: 100vh;
+      }
+
+      .layout {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+
+      .stack {
+        width: 100%;
+        max-width: 320px;
+      }
+
+      .controls {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <div>
-      <canvas id="game" width="220" height="484"></canvas>
+  <div class="shell">
+    <div class="layout">
+      <div class="stack">
+        <div class="panel">
+          <div class="title">[HOLD]</div>
+          <canvas id="hold" class="preview" width="96" height="96"></canvas>
+        </div>
+
+        <div class="panel">
+          <div class="title">[SCORE]</div>
+          <div id="score" class="stat-value">0</div>
+        </div>
+
+        <div class="panel">
+          <div class="title">[LV]</div>
+          <div id="level" class="stat-value">1</div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <canvas id="game" width="220" height="440"></canvas>
+      </div>
+
+      <div class="stack">
+        <div class="panel">
+          <div class="title">[TIME]</div>
+          <div id="timer" class="stat-value">00:00</div>
+        </div>
+
+        <div class="panel">
+          <div class="title">[NEXT]</div>
+          <div class="stack">
+            <canvas id="next0" class="preview" width="96" height="96"></canvas>
+            <canvas id="next1" class="preview" width="96" height="96"></canvas>
+            <canvas id="next2" class="preview" width="96" height="96"></canvas>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <div class="panel">
-      <div class="stat"><div>TIME</div><div id="timer">0</div></div>
-      <div class="stat"><div>SCORE</div><div id="score">0</div></div>
-      <div class="stat"><div>LEVEL</div><div id="level">1</div></div>
-
-      <div class="btnrow">
+    <div class="controls">
+      <div class="buttons">
         <button id="btnStart">Start</button>
         <button id="btnReset">Reset</button>
       </div>
 
       <div class="help">
-        A/D: Move Left/Right<br/>
-        S: Soft Drop<br/>
-        E/Q: Rotate<br/>
-        F or Space: Hard Drop<br/>
+        A/D: Move Left/Right<br />
+        S: Soft Drop<br />
+        E/Q: Rotate<br />
+        F or Space: Hard Drop<br />
         W: Hold
       </div>
     </div>
